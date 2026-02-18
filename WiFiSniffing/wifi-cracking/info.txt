@@ -1,1 +1,0 @@
- C0:4A:00:38:EC:AF  -50        5        0    0   1   54 . WPA2 CCMP   PSK  SafestWiFi                                                  
